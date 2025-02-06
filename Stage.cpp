@@ -1,5 +1,79 @@
 #include "Stage.h"
 #include "./globals.h"
+#include<stack>
+
+namespace {
+	std::stack<Point> prStack;
+
+	void DigDug(int x, int y, vector<vector<STAGE_OBJ>>& _stage)
+	{
+		_stage[y][x] = STAGE_OBJ::EMPTY;
+		Point Dir[]{ {0,-1},{1, 0},{0, 1},{-1,0} };
+		std::vector<int> dList;
+		for (int i = 0; i < 4; i++) {
+			//next‚ð0~3‚Ü‚Å‰ñ‚µ‚Ä‚Å‚½[‚ðŽæ“¾
+			Point next = Point{ x + Dir[i].x, y + Dir[i].y };
+			Point nextNext = { next.x + Dir[i].x, next.y + Dir[i].y };
+			if (nextNext.x < 0 || nextNext.y < 0 || nextNext.x > STAGE_WIDTH - 1 || nextNext.y > STAGE_HEIGHT - 1)
+				continue;
+
+			if (_stage[nextNext.y][nextNext.x] == STAGE_OBJ::WALL)
+			{
+				dList.push_back(i);
+			}
+		}
+		if (dList.empty())
+		{
+			return;
+		}
+		int nrand = rand() % dList.size();
+		int tmp = dList[nrand];
+
+		Point next = { x + Dir[tmp].x, y + Dir[tmp].y };
+		Point nextNext = { next.x + Dir[tmp].x, next.y + Dir[tmp].y };
+
+		_stage[next.y][next.x] = STAGE_OBJ::EMPTY;
+		_stage[nextNext.y][nextNext.x] = STAGE_OBJ::EMPTY;
+
+		prStack.push(nextNext);
+		DigDug(nextNext.x, nextNext.y, _stage);
+	}
+
+	void AllWall(int w, int h, vector<vector<STAGE_OBJ>>& _stage)
+	{
+		for (int j = 0; j < h; j++)
+		{
+			for (int i = 0; i < w; i++) {
+				if (i == 0 || j == 0 || i == w - 1 || j == h - 1)
+					_stage[j][i] = STAGE_OBJ::EMPTY;
+				else
+					_stage[j][i] = STAGE_OBJ::WALL;
+			}
+		}
+	}
+
+	void MakeMazeDigDug(int w, int h, vector<vector<STAGE_OBJ>>& _stage)
+	{
+		AllWall(w, h, _stage);
+		Point sp{ 1, 1 };
+		prStack.push(sp);
+		while (!prStack.empty())
+		{
+			sp = prStack.top();
+			prStack.pop();
+			DigDug(sp.x, sp.y, _stage);
+		}
+		for (int j = 0; j < h; j++)
+		{
+			for (int i = 0; i < w; i++)
+			{
+				if (i == 0 || j == 0 || i == w - 1 || j == h - 1)
+					_stage[j][i] = STAGE_OBJ::WALL;
+				continue;
+			}
+		}
+	}
+}
 
 Stage::Stage()
 {
@@ -23,6 +97,7 @@ Stage::Stage()
 
 		}
 	}
+	MakeMazeDigDug(STAGE_WIDTH,STAGE_HEIGHT,stageData);
 	setStageRects();
 }
 

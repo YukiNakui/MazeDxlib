@@ -1,14 +1,25 @@
 #include "Enemy.h"
 #include "./Stage.h"
 #include "globals.h"
+#include"Player.h"
+
+namespace
+{
+	Point nDir[4] = { {0,-1},{0,1},{-1,0},{1,0} };
+}
 
 Enemy::Enemy()
     :pos_({ 0,0 }), isAlive_(true)
 {
-    int rx = GetRand(STAGE_WIDTH * CHA_WIDTH);
-    int ry = GetRand(STAGE_HEIGHT * CHA_HEIGHT);
-    pos_ = { rx, ry };
-    dir_ = DIR::RIGHT;
+    int rx = 0;
+    int ry = 0;
+	while (rx % 2 == 0 || ry % 2 == 0)
+	{
+		rx = GetRand(STAGE_WIDTH - 1);
+		ry = GetRand(STAGE_HEIGHT - 1);
+	}
+	pos_ = { rx * CHA_WIDTH, ry * CHA_HEIGHT };
+    forward_ = DIR::RIGHT;
 }
 
 Enemy::~Enemy()
@@ -17,80 +28,43 @@ Enemy::~Enemy()
 
 void Enemy::Update()
 {
-	switch (dir_) {
-	case DIR::RIGHT:
-		pos_.x++;
-		break;
-	case DIR::LEFT:
-		pos_.x--;
-		break;
-	case DIR::UP:
-		pos_.y--;
-		break;
-	case DIR::DOWN:
-		pos_.y++;
-		break;
-	case DIR::NONE:
-		break;
-	default:
-		break;
-	}
+	static bool stop = false;
 
-	Stage* stage = (Stage*)FindGameObject<Stage>();
-    Rect enemyRect = { pos_.x,pos_.y,CHA_WIDTH,CHA_HEIGHT };
-	
-	for (auto& obj : stage->GetStageRects())
-	{
-		if (!CheckHit(enemyRect, obj))
+	if (!stop) {
+		Point op = pos_;
+		Point move = { nDir[forward_].x, nDir[forward_].y };
+		Rect eRect = { pos_.x, pos_.y,CHA_WIDTH, CHA_HEIGHT };
+		Stage* stage = (Stage*)FindGameObject<Stage>();
+		pos_ = { pos_.x + move.x, pos_.y + move.y };
+		for (auto& obj : stage->GetStageRects())
 		{
-			Rect tmpRectR = { pos_.x + CHA_WIDTH, pos_.y, CHA_WIDTH, CHA_HEIGHT };
-			Rect tmpRectL = { pos_.x - CHA_WIDTH, pos_.y, CHA_WIDTH, CHA_HEIGHT };
-			Rect tmpRectU = { pos_.x, pos_.y - CHA_HEIGHT, CHA_WIDTH, CHA_HEIGHT };
-			Rect tmpRectD = { pos_.x, pos_.y + CHA_HEIGHT, CHA_WIDTH, CHA_HEIGHT };
-			int hitObjCount = 0;
-			if (CheckHit(tmpRectR, obj))
-				hitObjCount++;
-			if (CheckHit(tmpRectL, obj))
-				hitObjCount++;
-			if (CheckHit(tmpRectU, obj))
-				hitObjCount++;
-			if (CheckHit(tmpRectD, obj))
-				hitObjCount++;
-
-			if (hitObjCount <= 1)
-				dir_ = SetRandomDir();
-		}
-		else {
-			Point centerMe = Rect{ pos_.x, pos_.y, CHA_WIDTH, CHA_HEIGHT }.GetCenter();
-			Point centerObj = obj.GetCenter();
-
-			int meR = centerMe.x + CHA_WIDTH / 2;//敵右端
-			int meL = centerMe.x - CHA_WIDTH / 2;//敵左端
-			int meU = centerMe.y - CHA_HEIGHT / 2;//敵上端
-			int meD = centerMe.y + CHA_HEIGHT / 2;//敵下端
-
-			int objR = centerObj.x + CHA_WIDTH / 2;//壁右端
-			int objL = centerObj.x - CHA_WIDTH / 2;//壁左端
-			int objU = centerObj.y - CHA_HEIGHT / 2;//壁上端
-			int objD = centerObj.y + CHA_HEIGHT / 2;//壁下端
-
-			if ((meR - objL) > 0 && dir_ == DIR::RIGHT) {//右に当たってる
-				pos_.x -= (meR - objL);
-				dir_ = SetRandomDir();
-			}
-			else if ((objR - meL) > 0 && dir_ == DIR::LEFT) {//左
-				pos_.x += (objR - meL);
-				dir_ = SetRandomDir();
-			}
-			else if ((meD - objU) > 0 && dir_ == DIR::DOWN) {//下
-				pos_.y -= (meD - objU);
-				dir_ = SetRandomDir();
-			}
-			else if ((objD - meU) > 0 && dir_ == DIR::UP) {//上
-				pos_.y += (objD - meU);
-				dir_ = SetRandomDir();
+			if (CheckHit(eRect, obj)) {
+				Rect tmpRectX = { op.x, pos_.y, CHA_WIDTH, CHA_HEIGHT };
+				Rect tmpRecty = { pos_.x, op.y, CHA_WIDTH, CHA_HEIGHT };
+				if (!CheckHit(tmpRectX, obj))
+				{
+					pos_.x = op.x;
+				}
+				else if (!CheckHit(tmpRecty, obj))
+				{
+					pos_.y = op.y;
+				}
+				else
+				{
+					pos_ = op;
+				}
+				forward_ = (DIR)(GetRand(3));
+				break;
 			}
 		}
+	}
+	int prgssx = pos_.x % (CHA_WIDTH);
+	int prgssy = pos_.y % (CHA_HEIGHT);
+	int cx = (pos_.x / (CHA_WIDTH)) % 2;
+	int cy = (pos_.y / (CHA_HEIGHT)) % 2;
+	if (prgssx == 0 && prgssy == 0 && cx && cy)
+	{
+		XYCloserMoveRandom();
 	}
 }
 
@@ -104,7 +78,7 @@ void Enemy::Draw()
 		{{pos_.x + CHA_WIDTH, pos_.y + CHA_HEIGHT / 2}, {pos_.x + CHA_WIDTH / 2, pos_.y}, {pos_.x + CHA_WIDTH / 2, pos_.y + CHA_HEIGHT}}
 	};
 
-	DrawTriangle(tp[dir_][0].x, tp[dir_][0].y, tp[dir_][1].x, tp[dir_][1].y, tp[dir_][2].x, tp[dir_][2].y, GetColor(255, 255, 255), TRUE);
+	DrawTriangle(tp[forward_][0].x, tp[forward_][0].y, tp[forward_][1].x, tp[forward_][1].y, tp[forward_][2].x, tp[forward_][2].y, GetColor(255, 255, 255), TRUE);
 }
 
 bool Enemy::CheckHit(const Rect& me, const Rect& other)
@@ -119,24 +93,81 @@ bool Enemy::CheckHit(const Rect& me, const Rect& other)
     return false;
 }
 
-DIR Enemy::SetRandomDir()
+void Enemy::XCloserMove()
 {
-	int randDir = GetRand(3);
-	switch (randDir) {
-	case DIR::UP:
-		return DIR::UP;
-		break;
-	case DIR::DOWN:
-		return DIR::DOWN;
-		break;
-	case DIR::RIGHT:
-		return DIR::RIGHT;
-		break;
-	case DIR::LEFT:
-		return DIR::LEFT;
-		break;
-	default:
-		return DIR::NONE;
-		break;
+	Player* pPlayer = (Player*)FindGameObject<Player>();
+	Point playerPos = pPlayer->GetPosition();
+	if (playerPos.x < pos_.x) {
+		forward_ = DIR::LEFT;
+	}
+	else if(playerPos.x > pos_.x) {
+		forward_ = DIR::RIGHT;
+	}
+}
+
+void Enemy::YCloserMove()
+{
+	Player* pPlayer = (Player*)FindGameObject<Player>();
+	Point playerPos = pPlayer->GetPosition();
+	if (playerPos.y < pos_.y) {
+		forward_ = DIR::UP;
+	}
+	else if (playerPos.y > pos_.y) {
+		forward_ = DIR::DOWN;
+	}
+}
+
+void Enemy::XYCloserMove()
+{
+	Player* pPlayer = (Player*)FindGameObject<Player>();
+	Point playerPos = pPlayer->GetPosition();
+	int distX = abs(pos_.x - playerPos.x);
+	int distY = abs(pos_.y - playerPos.y);
+	if (distX > distY) {
+		if (playerPos.x < pos_.x) {
+			forward_ = DIR::LEFT;
+		}
+		else if (playerPos.x > pos_.x) {
+			forward_ = DIR::RIGHT;
+		}
+	}
+	else {
+		if (playerPos.y < pos_.y) {
+			forward_ = DIR::UP;
+		}
+		else if (playerPos.y > pos_.y) {
+			forward_ = DIR::DOWN;
+		}
+	}
+}
+
+void Enemy::XYCloserMoveRandom()
+{
+	Player* pPlayer = (Player*)FindGameObject<Player>();
+	Point playerPos = pPlayer->GetPosition();
+	int distX = abs(pos_.x - playerPos.x);
+	int distY = abs(pos_.y - playerPos.y);
+	int randNum = 3;
+	int rand = GetRand(randNum);
+	if (rand % randNum == 0) {
+		if (distX > distY) {
+			if (playerPos.x < pos_.x) {
+				forward_ = DIR::LEFT;
+			}
+			else if (playerPos.x > pos_.x) {
+				forward_ = DIR::RIGHT;
+			}
+		}
+		else {
+			if (playerPos.y < pos_.y) {
+				forward_ = DIR::UP;
+			}
+			else if (playerPos.y > pos_.y) {
+				forward_ = DIR::DOWN;
+			}
+		}
+	}
+	else if(rand % randNum == 1){
+		forward_ = (DIR)(GetRand(3));
 	}
 }
