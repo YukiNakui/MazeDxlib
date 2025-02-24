@@ -1,5 +1,4 @@
 #include "Enemy.h"
-#include "./Stage.h"
 #include "globals.h"
 #include"Player.h"
 
@@ -28,15 +27,17 @@ Enemy::~Enemy()
 
 void Enemy::Update()
 {
-	static bool stop = false;
+	AStarMove();
 
-	if (!stop) {
+	//static bool stop = false;
+
+	/*if (!stop) {
 		Point op = pos_;
 		Point move = { nDir[forward_].x, nDir[forward_].y };
 		Rect eRect = { pos_.x, pos_.y,CHA_WIDTH, CHA_HEIGHT };
-		Stage* stage = (Stage*)FindGameObject<Stage>();
+		stage_ = (Stage*)FindGameObject<Stage>();
 		pos_ = { pos_.x + move.x, pos_.y + move.y };
-		for (auto& obj : stage->GetStageRects())
+		for (auto& obj : stage_->GetStageRects())
 		{
 			if (CheckHit(eRect, obj)) {
 				Rect tmpRectX = { op.x, pos_.y, CHA_WIDTH, CHA_HEIGHT };
@@ -57,15 +58,16 @@ void Enemy::Update()
 				break;
 			}
 		}
-	}
-	int prgssx = pos_.x % (CHA_WIDTH);
+	}*/
+
+	/*int prgssx = pos_.x % (CHA_WIDTH);
 	int prgssy = pos_.y % (CHA_HEIGHT);
 	int cx = (pos_.x / (CHA_WIDTH)) % 2;
 	int cy = (pos_.y / (CHA_HEIGHT)) % 2;
 	if (prgssx == 0 && prgssy == 0 && cx && cy)
 	{
 		XYCloserMoveRandom();
-	}
+	}*/
 }
 
 void Enemy::Draw()
@@ -169,5 +171,58 @@ void Enemy::XYCloserMoveRandom()
 	}
 	else if(rand % randNum == 1){
 		forward_ = (DIR)(GetRand(3));
+	}
+}
+
+void Enemy::AStarMove()
+{
+	Player* pPlayer = (Player*)FindGameObject<Player>();
+	Point playerPos = pPlayer->GetPosition();
+	std::vector<std::vector<bool>> visited(STAGE_HEIGHT, std::vector<bool>(STAGE_WIDTH, false));
+	std::priority_queue<Node, std::vector<Node>, std::greater<Node>> openList; // 優先度付きキュー
+	std::vector<std::vector<Node>> cameFrom(STAGE_HEIGHT, std::vector<Node>(STAGE_WIDTH));
+
+	Node start = { pos_.x / CHA_WIDTH, pos_.y / CHA_HEIGHT, 0.0f, Heuristic(pos_.x / CHA_WIDTH, pos_.y / CHA_HEIGHT, playerPos.x / CHA_WIDTH, playerPos.y / CHA_HEIGHT) };
+	openList.push(start);
+
+	while (!openList.empty()) {
+		Node current = openList.top();
+		openList.pop();
+
+		// 目標位置に到達した場合、経路を辿る
+		if (current.x == playerPos.x / CHA_WIDTH && current.y == playerPos.y / CHA_HEIGHT) {
+			RetracePath(cameFrom, current);
+			return;
+		}
+
+		visited[current.y][current.x] = true;
+
+		// 隣接ノードを評価
+		for (int i = 0; i < 4; i++) {
+			int nx = current.x + nDir[i].x;
+			int ny = current.y + nDir[i].y;
+
+			STAGE_OBJ stageObj = stage_->GetStageData(ny, nx);
+			// 範囲外や壁には進めない
+			if (nx < 0 || ny < 0 || nx >= STAGE_WIDTH || ny >= STAGE_HEIGHT || stageObj == STAGE_OBJ::WALL || visited[ny][nx])
+				continue;
+
+			float gCost = current.gCost + 1.0f;
+			float hCost = Heuristic(nx, ny, playerPos.x / CHA_WIDTH, playerPos.y / CHA_HEIGHT);
+			Node neighbor = { nx, ny, gCost, hCost };
+
+			if (!visited[ny][nx]) {
+				openList.push(neighbor);
+				cameFrom[ny][nx] = current;
+			}
+		}
+	}
+}
+
+void Enemy::RetracePath(std::vector<std::vector<Node>>& cameFrom, Node current)
+{
+	while (cameFrom[current.y][current.x].x != current.x || cameFrom[current.y][current.x].y != current.y) {
+		current = cameFrom[current.y][current.x];
+		pos_ = { current.x * CHA_WIDTH, current.y * CHA_HEIGHT };
 	}
 }

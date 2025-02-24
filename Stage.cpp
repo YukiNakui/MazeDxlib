@@ -1,14 +1,16 @@
 #include "Stage.h"
 #include "./globals.h"
 #include<stack>
+#include<time.h>
 
 namespace {
 	std::stack<Point> prStack;
 
+	Point Dir[]{ {0,-1},{1, 0},{0, 1},{-1,0} };
+
 	void DigDug(int x, int y, vector<vector<STAGE_OBJ>>& _stage)
 	{
 		_stage[y][x] = STAGE_OBJ::EMPTY;
-		Point Dir[]{ {0,-1},{1, 0},{0, 1},{-1,0} };
 		std::vector<int> dList;
 		for (int i = 0; i < 4; i++) {
 			//nextを0~3まで回してでたーを取得
@@ -73,13 +75,54 @@ namespace {
 			}
 		}
 	}
+
+	void CreateLoops(int loopCount, vector<vector<STAGE_OBJ>>& _stage) {
+		std::vector<Point> wallCandidates; //穴をあける壁の候補リスト
+
+		for (int y = 1; y < STAGE_HEIGHT - 1; y++) {
+			for (int x = 1; x < STAGE_WIDTH - 1; x++) {
+				if (_stage[y][x] == STAGE_OBJ::WALL) {
+					bool isVerticalWallWithEmptySides = false;
+					bool isHorizontalWallWithEmptySides = false;
+
+					//上下が壁で、左右が両方とも空白の場合
+					if (_stage[y - 1][x] == STAGE_OBJ::WALL && _stage[y + 1][x] == STAGE_OBJ::WALL &&
+						_stage[y][x - 1] == STAGE_OBJ::EMPTY && _stage[y][x + 1] == STAGE_OBJ::EMPTY) {
+						isVerticalWallWithEmptySides = true;
+					}
+
+					//左右が壁で、上下が両方とも空白の場合
+					if (_stage[y][x - 1] == STAGE_OBJ::WALL && _stage[y][x + 1] == STAGE_OBJ::WALL &&
+						_stage[y - 1][x] == STAGE_OBJ::EMPTY && _stage[y + 1][x] == STAGE_OBJ::EMPTY) {
+						isHorizontalWallWithEmptySides = true;
+					}
+
+					if (isVerticalWallWithEmptySides || isHorizontalWallWithEmptySides) {
+						wallCandidates.push_back({ x, y });
+					}
+				}
+			}
+		}
+
+		//候補の中からランダムに選んで穴を開ける
+		for (int i = 0; i < loopCount && !wallCandidates.empty(); i++) {
+			int randIndex = rand() % wallCandidates.size();
+			Point p = wallCandidates[randIndex];
+			_stage[p.y][p.x] = STAGE_OBJ::EMPTY;
+
+			wallCandidates.erase(wallCandidates.begin() + randIndex);
+		}
+	}
+
 }
 
 Stage::Stage()
 {
+	std::srand((unsigned int)time(NULL));
+
 	stageData = vector(STAGE_HEIGHT, vector<STAGE_OBJ>(STAGE_WIDTH, STAGE_OBJ::EMPTY));
 
-	for (int y = 0; y < STAGE_HEIGHT; y++)
+	/*for (int y = 0; y < STAGE_HEIGHT; y++)
 	{
 		for (int x = 0; x < STAGE_WIDTH; x++)
 		{
@@ -96,8 +139,9 @@ Stage::Stage()
 			}
 
 		}
-	}
+	}*/
 	MakeMazeDigDug(STAGE_WIDTH,STAGE_HEIGHT,stageData);
+	CreateLoops(10, stageData);
 	setStageRects();
 }
 
