@@ -1,7 +1,6 @@
 #pragma once
 #include "./Library/GameObject.h"
 #include "./globals.h"
-#include "./Stage.h"
 
 class Enemy :
     public GameObject
@@ -10,7 +9,6 @@ class Enemy :
     bool isAlive_;
     float speed_;
     DIR forward_;//進行方向
-    Stage* stage_;
 public:
     Enemy();
     ~Enemy();
@@ -22,6 +20,8 @@ public:
     void XCloserMove();
     void YCloserMove();
     void XYCloserMove();
-    void XYCloserMoveRandom();
+    void XYCloserMoveRandom();//ランダム
+    void RightHandMove();     //右手法
+	void LeftHandMove();      //左手法
 };
 
