@@ -96,6 +96,7 @@ void Player::Update()
 				//‚»‚êˆÈŠO‚Åˆø‚ÁŠ|‚©‚Á‚½i‚¢‚Â‚â‚ñj
 				pos_.x = ox;
 				pos_.y = oy;
+				break;
 			}
 		}
 	}

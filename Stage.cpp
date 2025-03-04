@@ -191,3 +191,26 @@ void Stage::setStageRects()
 	}
 
 }
+
+Point Stage::GetRandomEmptyPosition()
+{
+	vector<Point> emptyPositions;
+	for (int y = 0; y < STAGE_HEIGHT; y++) {
+		for (int x = 0; x < STAGE_WIDTH; x++) {
+			if (stageData[y][x] == STAGE_OBJ::EMPTY) {
+				emptyPositions.push_back({ x * CHA_WIDTH, y * CHA_HEIGHT });
+			}
+		}
+	}
+	if (!emptyPositions.empty()) {
+		int index = GetRand(emptyPositions.size());
+		return emptyPositions[index];
+	}
+	return { CHA_WIDTH, CHA_HEIGHT };
+}
+
+bool Stage::IsPassable(int gridX, int gridY) {
+	if (gridX < 0 || gridX >= STAGE_WIDTH || gridY < 0 || gridY >= STAGE_HEIGHT)
+		return false;
+	return stageData[gridY][gridX] == STAGE_OBJ::EMPTY;
+}

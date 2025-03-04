@@ -11,6 +11,26 @@ class Enemy :
     float speed_;
     DIR forward_;//êiçsï˚å¸
     Stage* stage_;
+
+
+    Point targetPos_;
+
+    //A*ÇÃåoòH
+    std::vector<Point> path_;
+    int pathIndex_;
+
+    enum ENEMYMODE {
+        RANDOM,
+        RIGHT_HAND,
+        LEFT_HAND,
+        BFS,
+        DFS,
+        DIJKSTRA,
+        ASTAR,
+        MAX_ENEMYMODE
+    };
+
+    ENEMYMODE chaseMode_;
 public:
     Enemy();
     ~Enemy();
@@ -18,10 +38,7 @@ public:
     void Update() override;
     void Draw() override;
     bool CheckHit(const Rect& me, const Rect& other);
-    
-    void XCloserMove();
-    void YCloserMove();
-    void XYCloserMove();
-    void XYCloserMoveRandom();
+
+    void DisplayImgui();
 };
 

@@ -27,5 +27,10 @@ public:
 	STAGE_OBJ GetStageData(int x, int y) {return stageData[y][x];}
 	vector<Rect> GetStageRects() { return stageRects; }
 	void setStageRects();
+
+	//Enemyをランダム表示
+	Point GetRandomEmptyPosition();
+	//Stageに通行可能かどうか返す
+	bool IsPassable(int gridX, int gridY);
 };
 
